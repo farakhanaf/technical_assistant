@@ -90,7 +90,8 @@
 
   <h1>🖥 {{ system.hostname }}</h1>
   <div class="subtitle">
-    {{ system.os }} • {{ system.architecture }} • Uptime: {{ system.uptime }}
+    {{ system.os }} • {{ system.architecture }} • Uptime:
+    <span id="uptime">{{ system.uptime }}</span>
   </div>
 
   <!-- SYSTEM -->
@@ -105,7 +106,9 @@
     <h2>CPU</h2>
     <div class="row">
       <span class="label">Usage</span>
-      <span class="value {{ 'crit' if cpu.usage_total > 85 else 'warn' if cpu.usage_total > 65 else 'ok' }}">
+      <span
+        id="cpu_usage"
+        class="value {{ 'crit' if cpu.usage_total > 85 else 'warn' if cpu.usage_total > 65 else 'ok' }}">
         {{ cpu.usage_total }} %
       </span>
     </div>
@@ -125,7 +128,9 @@
     <div class="row"><span class="label">Used</span><span class="value">{{ memory.ram_used }} / {{ memory.ram_total }} GB</span></div>
     <div class="row">
       <span class="label">Available</span>
-      <span class="value {{ 'crit' if memory.ram_available < 1 else 'warn' if memory.ram_available < 2 else 'ok' }}">
+      <span
+        id="ram_available"
+        class="value {{ 'crit' if memory.ram_available < 1 else 'warn' if memory.ram_available < 2 else 'ok' }}">
         {{ memory.ram_available }} GB
       </span>
     </div>
@@ -165,7 +170,9 @@
     <h2>Battery</h2>
     <div class="row">
       <span class="label">Charge</span>
-      <span class="value {{ 'crit' if battery.percent < 20 else 'warn' if battery.percent < 40 else 'ok' }}">
+      <span
+        id="battery_percent"
+        class="value {{ 'crit' if battery.percent < 20 else 'warn' if battery.percent < 40 else 'ok' }}">
         {{ battery.percent }}%
       </span>
     </div>
@@ -187,6 +194,44 @@
       {% endfor %}
     </ul>
   </div>
+
+<script>
+async function refreshStatus() {
+  try {
+    const res = await fetch("/api/status");
+    const data = await res.json();
+
+    // SYSTEM
+    document.getElementById("uptime").innerText = data.system.uptime;
+
+    // CPU
+    document.getElementById("cpu_usage").innerText =
+      data.cpu.usage_total + " %";
+
+    // MEMORY
+    document.getElementById("ram_available").innerText =
+      data.memory.ram_available + " GB";
+
+    // BATTERY (jika ada)
+    if (data.battery) {
+      document.getElementById("battery_percent").innerText =
+        data.battery.percent + "%";
+      document.getElementById("battery_time").innerText =
+        data.battery.time_left;
+    }
+
+  } catch (err) {
+    console.error("Status refresh failed", err);
+  }
+}
+
+// refresh tiap 5 detik
+setInterval(refreshStatus, 5000);
+
+// refresh pertama kali langsung
+refreshStatus();
+</script>
+
 
 </body>
 </html>

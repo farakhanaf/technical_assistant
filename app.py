@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import psutil
 import platform
 import socket
@@ -127,6 +127,18 @@ def index():
         battery=get_battery_detail(),
         processes=get_top_processes()
     )
+
+@app.route("/api/status")
+def api_status():
+    return jsonify({
+        "system": get_system_info(),
+        "cpu": get_cpu_detail(),
+        "memory": get_memory_detail(),
+        "disk_io": get_disk_io(),
+        "network": get_network_info(),
+        "battery": get_battery_detail(),
+        "processes": get_top_processes()
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080, debug=False)
