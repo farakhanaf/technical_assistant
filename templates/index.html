@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Info Agent</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            padding: 20px;
+        }
+        .card {
+            background: #020617;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🖥 {{ system.hostname }}</h1>
+
+<div class="card">
+    <h2>System</h2>
+    OS: {{ system.os }} <br>
+    Version: {{ system.os_version }} <br>
+    Architecture: {{ system.architecture }} <br>
+    Processor: {{ system.processor }} <br>
+</div>
+
+<div class="card">
+    <h2>CPU & RAM</h2>
+    CPU Cores: {{ system.cpu_cores }} <br>
+    CPU Threads: {{ system.cpu_threads }} <br>
+    RAM: {{ system.ram_used }} / {{ system.ram_total }} GB
+</div>
+
+<div class="card">
+    <h2>Storage</h2>
+    {% for d in disks %}
+        {{ d.device }} → {{ d.used }} / {{ d.total }} GB <br>
+    {% endfor %}
+</div>
+
+{% if battery %}
+<div class="card">
+    <h2>Battery</h2>
+    Charge: {{ battery.percent }}% <br>
+    Status: {{ "Charging" if battery.plugged else "Discharging" }}
+</div>
+{% endif %}
+
+</body>
+</html>
