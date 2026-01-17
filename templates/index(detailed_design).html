@@ -5,7 +5,7 @@
 <title>Technical Assistant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Simple Design -->
+<!-- Detailed Design -->
 
 <style>
 :root {
@@ -122,7 +122,7 @@ body {
 
   <!-- HEADER -->
   <div class="header">
-    <h1>{{ system.hostname }}</h1>
+    <h1>🖥 {{ system.hostname }}</h1>
     <div class="subtitle">
       {{ system.os }} • {{ system.architecture }}
     </div>
@@ -134,6 +134,10 @@ body {
     <div class="item">
       <span class="label">User</span>
       <span class="value">{{ system.current_user }}</span>
+    </div>
+    <div class="item">
+      <span class="label">Processor</span>
+      <span class="value">{{ system.processor }}</span>
     </div>
     <div class="item">
       <span class="label">Uptime</span>
@@ -151,14 +155,74 @@ body {
         {{ cpu.usage_total }} %
       </span>
     </div>
+    <div class="item">
+      <span class="label">Frequency</span>
+      <span class="value">{{ cpu.frequency_current }} MHz</span>
+    </div>
+    {% for c in cpu.usage_per_core %}
+    <div class="item">
+      <span class="label">Core {{ loop.index }}</span>
+      <span class="value">{{ c }}%</span>
+    </div>
+    {% endfor %}
   </div>
 
   <!-- MEMORY -->
   <div class="section">
     <div class="section-title">Memory</div>
     <div class="item">
+      <span class="label">Used</span>
+      <span class="value">{{ memory.ram_used }} / {{ memory.ram_total }} GB</span>
+    </div>
+    <div class="item">
       <span class="label">Available</span>
-      <span id="ram_available" class="value">{{ memory.ram_available }} GB</span>
+      <span id="ram_available"
+        class="value {{ 'crit' if memory.ram_available < 1 else 'warn' if memory.ram_available < 2 else 'ok' }}">
+        {{ memory.ram_available }} GB
+      </span>
+    </div>
+    <div class="item">
+      <span class="label">Swap</span>
+      <span class="value">{{ memory.swap_used }} GB</span>
+    </div>
+  </div>
+
+  <!-- STORAGE -->
+  <div class="section">
+    <div class="section-title">Storage</div>
+    {% for d in disks %}
+    <div class="item">
+      <span class="label">{{ d.device }}</span>
+      <span class="value {{ 'crit' if (d.used / d.total * 100) > 90 else 'warn' if (d.used / d.total * 100) > 75 else 'ok' }}">
+        {{ d.used }} / {{ d.total }} GB
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- DISK I/O -->
+  <div class="section">
+    <div class="section-title">Disk I/O</div>
+    <div class="item">
+      <span class="label">Read</span>
+      <span class="value">{{ disk_io.read_gb }} GB</span>
+    </div>
+    <div class="item">
+      <span class="label">Write</span>
+      <span class="value">{{ disk_io.write_gb }} GB</span>
+    </div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="section">
+    <div class="section-title">Network</div>
+    <div class="item">
+      <span class="label">Sent</span>
+      <span class="value">{{ network.bytes_sent_mb }} MB</span>
+    </div>
+    <div class="item">
+      <span class="label">Received</span>
+      <span class="value">{{ network.bytes_recv_mb }} MB</span>
     </div>
   </div>
 
@@ -174,11 +238,26 @@ body {
       </span>
     </div>
     <div class="item">
+      <span class="label">Status</span>
+      <span class="value">{{ "Charging" if battery.plugged else "Discharging" }}</span>
+    </div>
+    <div class="item">
       <span class="label">Time Left</span>
       <span id="battery_time" class="value">{{ battery.time_left }}</span>
     </div>
   </div>
   {% endif %}
+
+  <!-- TOP PROCESSES -->
+  <div class="section">
+    <div class="section-title">Top Processes</div>
+    {% for p in processes %}
+    <div class="item">
+      <span class="label">{{ p.name }} (PID {{ p.pid }})</span>
+      <span class="value">CPU {{ p.cpu_percent }}% | RAM {{ "%.2f"|format(p.memory_percent) }}%</span>
+    </div>
+    {% endfor %}
+  </div>
 
   <!-- FOOTER -->
   <div class="footer">
@@ -187,6 +266,43 @@ body {
   </div>
 
 </div>
+
+<script>
+async function refreshStatus() {
+  try {
+    const res = await fetch("/api/status");
+    const data = await res.json();
+
+    // SYSTEM
+    document.getElementById("uptime").innerText = data.system.uptime;
+
+    // CPU
+    document.getElementById("cpu_usage").innerText =
+      data.cpu.usage_total + " %";
+
+    // MEMORY
+    document.getElementById("ram_available").innerText =
+      data.memory.ram_available + " GB";
+
+    // BATTERY (jika ada)
+    if (data.battery) {
+      document.getElementById("battery_percent").innerText =
+        data.battery.percent + "%";
+      document.getElementById("battery_time").innerText =
+        data.battery.time_left;
+    }
+
+  } catch (err) {
+    console.error("Status refresh failed", err);
+  }
+}
+
+// refresh tiap 5 detik
+setInterval(refreshStatus, 5000);
+
+// refresh pertama kali langsung
+refreshStatus();
+</script>
 
 </body>
 </html>
