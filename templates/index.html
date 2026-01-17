@@ -1,60 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>System Info Agent</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
-            padding: 20px;
-        }
-        .card {
-            background: #020617;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-        h2 {
-            margin-top: 0;
-            color: #38bdf8;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Technical Assistant - System Inspection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 16px;
+    }
+
+    h1 {
+      margin-bottom: 4px;
+      font-size: 1.4rem;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+
+    .card {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #38bdf8;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .label {
+      color: #94a3b8;
+    }
+
+    .value {
+      font-weight: 500;
+    }
+
+    .ok {
+      color: #22c55e;
+    }
+
+    .warn {
+      color: #facc15;
+    }
+
+    .crit {
+      color: #ef4444;
+    }
+
+    .small {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    ul {
+      padding-left: 16px;
+      margin: 6px 0;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h1>🖥 {{ system.hostname }}</h1>
+  <h1>🖥 {{ system.hostname }}</h1>
+  <div class="subtitle">
+    {{ system.os }} • {{ system.architecture }} • Uptime: {{ system.uptime }}
+  </div>
 
-<div class="card">
+  <!-- SYSTEM -->
+  <div class="card">
     <h2>System</h2>
-    OS: {{ system.os }} <br>
-    Version: {{ system.os_version }} <br>
-    Architecture: {{ system.architecture }} <br>
-    Processor: {{ system.processor }} <br>
-</div>
+    <div class="row"><span class="label">User</span><span class="value">{{ system.current_user }}</span></div>
+    <div class="row"><span class="label">Processor</span><span class="value">{{ system.processor }}</span></div>
+  </div>
 
-<div class="card">
-    <h2>CPU & RAM</h2>
-    CPU Cores: {{ system.cpu_cores }} <br>
-    CPU Threads: {{ system.cpu_threads }} <br>
-    RAM: {{ system.ram_used }} / {{ system.ram_total }} GB
-</div>
+  <!-- CPU -->
+  <div class="card">
+    <h2>CPU</h2>
+    <div class="row">
+      <span class="label">Usage</span>
+      <span class="value {{ 'crit' if cpu.usage_total > 85 else 'warn' if cpu.usage_total > 65 else 'ok' }}">
+        {{ cpu.usage_total }} %
+      </span>
+    </div>
+    <div class="row"><span class="label">Frequency</span><span class="value">{{ cpu.frequency_current }} MHz</span></div>
 
-<div class="card">
+    <div class="small">Per Core</div>
+    <ul class="small">
+      {% for c in cpu.usage_per_core %}
+        <li>Core {{ loop.index }}: {{ c }}%</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- MEMORY -->
+  <div class="card">
+    <h2>Memory</h2>
+    <div class="row"><span class="label">Used</span><span class="value">{{ memory.ram_used }} / {{ memory.ram_total }} GB</span></div>
+    <div class="row">
+      <span class="label">Available</span>
+      <span class="value {{ 'crit' if memory.ram_available < 1 else 'warn' if memory.ram_available < 2 else 'ok' }}">
+        {{ memory.ram_available }} GB
+      </span>
+    </div>
+    <div class="row"><span class="label">Swap</span><span class="value">{{ memory.swap_used }} GB</span></div>
+  </div>
+
+  <!-- STORAGE -->
+  <div class="card">
     <h2>Storage</h2>
     {% for d in disks %}
-        {{ d.device }} → {{ d.used }} / {{ d.total }} GB <br>
+      <div class="row">
+        <span class="label">{{ d.device }}</span>
+        <span class="value {{ 'crit' if (d.used / d.total * 100) > 90 else 'warn' if (d.used / d.total * 100) > 75 else 'ok' }}">
+          {{ d.used }} / {{ d.total }} GB
+        </span>
+      </div>
     {% endfor %}
-</div>
+  </div>
 
-{% if battery %}
-<div class="card">
+  <!-- DISK IO -->
+  <div class="card">
+    <h2>Disk I/O</h2>
+    <div class="row"><span class="label">Read</span><span class="value">{{ disk_io.read_gb }} GB</span></div>
+    <div class="row"><span class="label">Write</span><span class="value">{{ disk_io.write_gb }} GB</span></div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="card">
+    <h2>Network</h2>
+    <div class="row"><span class="label">Sent</span><span class="value">{{ network.bytes_sent_mb }} MB</span></div>
+    <div class="row"><span class="label">Received</span><span class="value">{{ network.bytes_recv_mb }} MB</span></div>
+  </div>
+
+  <!-- BATTERY -->
+  {% if battery %}
+  <div class="card">
     <h2>Battery</h2>
-    Charge: {{ battery.percent }}% <br>
-    Status: {{ "Charging" if battery.plugged else "Discharging" }}
-</div>
-{% endif %}
+    <div class="row">
+      <span class="label">Charge</span>
+      <span class="value {{ 'crit' if battery.percent < 20 else 'warn' if battery.percent < 40 else 'ok' }}">
+        {{ battery.percent }}%
+      </span>
+    </div>
+    <div class="row"><span class="label">Status</span><span class="value">{{ "Charging" if battery.plugged else "Discharging" }}</span></div>
+    <div class="row"><span class="label">Time Left</span><span class="value">{{ battery.time_left }}</span></div>
+  </div>
+  {% endif %}
+
+  <!-- TOP PROCESSES -->
+  <div class="card">
+    <h2>Top Processes</h2>
+    <ul class="small">
+      {% for p in processes %}
+        <li>
+          {{ p.name }} (PID {{ p.pid }}) —
+          CPU {{ p.cpu_percent }}% |
+          RAM {{ "%.2f"|format(p.memory_percent) }}%
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 
 </body>
 </html>
